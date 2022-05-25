@@ -7,6 +7,7 @@
           <h3>Übersicht</h3>
         </div>
       </div>
+      <q-btn round @click="test" label="Refresh" />
       <div class="row">
         <div class="col-2"></div>
         <div class="col-8 self-center">
@@ -67,8 +68,13 @@
 </template>
 
 <script>
+import { storage } from 'src/boot/plugins';
+import { vaccinationsMidata } from 'src/plugins/midataService';
 import { ref } from 'vue';
-import {patient} from '../plugins/storage';
+import { defineComponent } from 'vue';
+import { loggedInPatient, vaccinations } from '../plugins/epdService.ts';
+
+
 
 const columns = [
   {
@@ -85,13 +91,12 @@ const columns = [
     align: 'center',
     label: 'Hochgeladen auf',
     field: 'platform',
-    sortable: true,
   },
   {
     name: 'producer',
     align: 'center',
-    label: 'Hersteller',
-    field: 'producer',
+    label: 'Lot Nummer',
+    field: 'lotNo',
     sortable: true,
   },
   { name: 'protection', label: 'Schutz', field: 'protection', sortable: true },
@@ -100,86 +105,42 @@ const columns = [
     name: 'vaccinationdate',
     label: 'Verabreichungsdatum',
     field: 'vaccinationdate',
+    sortable: true,
   },
   { name: 'practicioner', label: 'Behandelnder Arzt', field: 'practicioner' },
 ];
 
-const rows = [
-  {
-    name: 'Frozen Yogurt',
-    producer: 'Moderna',
-    protection: 'Röteln',
-    dosageno: 26164,
-    vaccinationdate: '02/06/2021',
-    practicioner: 'Cornelia Corona',
-    platform: ['EPD'],
-  },
-  {
-    name: 'Ice cream sandwich',
-    producer: 'Coop',
-    protection: 'Virale hepatitis, Typ B',
-    dosageno: 37525,
-    vaccinationdate: '02/06/2011',
-    practicioner: 'Apotheker Alain',
-    platform: ['EPD', 'Midata'].join(' '),
-  },
-  {
-    name: 'Eclair',
-    producer: 'Migros',
-    protection: 'Röteln',
-    dosageno: 23442,
-    vaccinationdate: '02/06/2014',
-    practicioner: 'Pfleger Paul',
-    platform: ['Midata'],
-  },
-  {
-    name: 'Cupcake',
-    producer: 'Migros',
-    protection: 'Gelbfieber',
-    dosageno: 64247,
-    vaccinationdate: '02/06/2011',
-    practicioner: 'Ingo Impft',platform: ['EPD', ''].join(' '),
-  },
-  {
-    name: 'Gingerbread',
-    producer: 'Nestle',
-    protection: 'Röteln',
-    dosageno: 49224,
-    vaccinationdate: '02/06/2021',
-    practicioner: 'Sandra Sticht',platform: ['', 'Midata'].join(' '),
-  },
-  {
-    name: 'Jelly bean',
-    producer: 'Moderna',
-    protection: 'Windpocken',
-    dosageno: 94424,
-    vaccinationdate: '02/06/2021',
-    practicioner: 'Lebkuchemann',platform: ['', 'Midata'].join(' '),
-  },
-  {
-    name: 'Donut',
-    producer: 'Pfizer',
-    protection: 'Gelbfieber',
-    dosageno: 55101,
-    vaccinationdate: '02/06/2021',
-    practicioner: 'Apotheker Alain',platform: ['EPD', ''].join(' '),
-  },
-  {
-    name: 'KitKat',
-    producer: 'Moderna',
-    protection: 'Röteln',
-    dosageno: 60065,
-    vaccinationdate: '02/06/2001',
-    practicioner: 'Doktor Daniela',platform: ['EPD', 'Midata'].join(' '),
-  },
-];
+// const rowsMidata = storage.getImmunizations();
+const rowsMidata = vaccinationsMidata;
+const rowsEPD = vaccinations;
 
-export default {
+let rows = [];
+
+//if (rowsEPD && rowsMidata) rows.concat(rowsEPD, rowsMidata);
+//if (rowsEPD) rows = rowsEPD;
+if (rowsMidata) rows = rowsMidata;
+
+console.log(
+  'rows EPD exist: ',rowsEPD,
+  '\nrows Midata exist: ',rowsMidata,
+  '\nRows count', rows.length,
+  '\nvaccinations', vaccinations.length);
+
+export default defineComponent({
+  data() {
+    return {};
+  },
+  methods: {
+    test() {
+      this.$epd.getVaccinations();
+    },
+  },
   setup() {
     const selected = ref([]);
-
     return {
-      patientName: ref(patient.name),
+      patientName: ref(
+        loggedInPatient.loggedIn?.name[0].family ?? 'Bitte Patient erfassen'
+      ),
       stoffname: 'hello',
       date: ref('2022/01/01'),
       group: ref([]),
@@ -197,5 +158,5 @@ export default {
       },
     };
   },
-};
+});
 </script>

@@ -1,40 +1,39 @@
 <template>
-  <login-card v-if="!$midata.isLoggedIn()"></login-card>
-  <q-page v-if="$midata.isLoggedIn()">
-    <div class="q-mb-xl">
+  <login-card></login-card>
+  <q-page>
+<!--     <div class="q-mb-xl">
       <div class="text-h3 text-weight-thin">Midata Demo</div>
       <q-separator spaced class="midata-fade"></q-separator>
-    </div>
+    </div> -->
 
-<q-btn
-        color="black"
-        label="Test Create Immunization"
-        icon="search"
-        rounded
-        outline
-        @click="this.$storage.createImmunization()"
-        class="gt-xs"
-      />
-<q-btn
-        color="black"
-        label="Test Immunizations Array"
-        icon="search"
-        rounded
-        outline
-        @click="testImmunizationsArray()"
-        class="gt-xs"
-      />
-
-<q-btn
-        color="black"
-        label="Test Observation Array"
-        icon="search"
-        rounded
-        outline
-        @click="testObservationArray()"
-        class="gt-xs"
-      />
-
+    <q-btn
+      color="black"
+      label="Test Create Immunization"
+      icon="search"
+      rounded
+      outline
+      @click="this.$storage.createImmunization()"
+      class="gt-xs"
+    />
+    <q-btn
+      color="black"
+      label="Test Immunizations Array"
+      icon="search"
+      rounded
+      outline
+      @click="testImmunizationsArray()"
+      class="gt-xs"
+    />
+<!--
+    <q-btn
+      color="black"
+      label="Test Observation Array"
+      icon="search"
+      rounded
+      outline
+      @click="testObservationArray()"
+      class="gt-xs"
+    /> -->
 
     <div class="row justify-end">
       <q-btn
@@ -145,10 +144,10 @@
 
     <q-card bordered>
       <q-card-section>
-        <q-item-label header
+        <!--         <q-item-label header
           >Alle Körpertemperatur Observationen von
           {{ getFullPatientName() }}</q-item-label
-        >
+        > -->
         <q-virtual-scroll
           :items="getObservations()"
           bordered
@@ -167,12 +166,12 @@
                 </q-avatar>
               </q-item-section>
               <q-item-section>
-                <q-item-label
+                <!--                 <q-item-label
                   lines="1"
                   v-if="item.code.coding[0].display == 'Body temperature'"
                 >
                   Körpertemperatur
-                </q-item-label>
+                </q-item-label> -->
                 <q-item-label caption>
                   Wert: {{ item.valueQuantity.value }}
                   {{ item.valueQuantity.unit }} ({{
@@ -233,101 +232,22 @@
     >
     </add-observation-dialog>
 
-<!-- ---------------Immunization Painel------------------------------------------ -->
+    <!-- ---------------Immunization Painel------------------------------------------ -->
 
-     <q-card bordered>
-      <q-card-section>
-        <q-item-label header
-          >Alle Immunizations von
-          {{ getFullPatientName() }}</q-item-label
-        >
-        <q-virtual-scroll
-          :items="getImmunizations()"
-          bordered
-          padding
-          class="rounded-borders"
-          style="max-height: 300px"
-        >
-          <template v-slot="{ item, index }">
-            <q-item clickable dense v-ripple :key="index">
-              <q-item-section avatar>
-                <q-avatar
-                  icon="thermostat"
-                  text-color="white"
-                  class="midata-fade"
-                >
-                </q-avatar>
-              </q-item-section>
-              <q-item-section>
-                <q-item-label
-                  lines="1"
-                  v-if="item.code.coding[0].display == 'Body temperature'"
-                >
-                  Körpertemperatur
-                </q-item-label>
-                <q-item-label caption>
-                  Vaccine: {{ item.vaccineCode.coding.code.value }}
-                  {{ item.valueQuantity.unit }} ({{
-                    item.bodySite.coding[0].display
-                  }})
-                </q-item-label>
-                <q-item-label caption>
-                  Datum:
-                  {{ formatDate(item.issued) }}
-                </q-item-label>
-              </q-item-section>
-              <q-btn
-                color="primary"
-                outlined
-                flat
-                @mouseover="setCurrentObservation(item.id)"
-                @click.stop="showEditDialog = true"
-                icon="edit"
-                class="gt-xs"
-              >
-                Observation bearbeiten
-              </q-btn>
-              <q-btn
-                color="primary"
-                outlined
-                round
-                flat
-                @mouseover="setCurrentObservation(item.id)"
-                @click.stop="showEditDialog = true"
-                icon="edit"
-                class="lt-sm"
-              >
-              </q-btn>
-            </q-item>
-            <q-separator inset spaced />
-          </template>
-        </q-virtual-scroll>
-      </q-card-section>
-      <q-card-actions>
-        <q-btn
-          color="primary"
-          outlined
-          flat
-          icon="add"
-          @click.stop="showAddDialog = true"
-          label="Observation hinzufügen"
-        />
-      </q-card-actions>
-    </q-card>
-
-<!-- ------------------------------------------ -->
-
+    <!-- ------------------------------------------ -->
   </q-page>
 </template>
 
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
 import LoginCard from '../../components/LoginCard.vue';
-import { Patient } from '@i4mi/fhir_r4';
+import { Patient, Immunization } from '@i4mi/fhir_r4';
 import bodySites from '../../data/bodySites.json';
 import EditObservationDialog from '../../components/EditObservationDialog.vue';
 import AddObservationDialog from '../../components/AddObservationDialog.vue';
-
+import { midata, storage } from 'src/boot/plugins';
+import { store } from 'quasar/wrappers';
+import { vaccinationsMidata } from 'src/plugins/midataService';
 export default defineComponent({
   name: 'MidataDemo',
   components: {
@@ -363,10 +283,10 @@ export default defineComponent({
   }),
   computed: {},
   methods: {
-    getFullPatientName() {
+    /*     getFullPatientName() {
       let name = this.$storage.getPatient().name;
       return name[0].given.toString() + ' ' + name[0].family;
-    },
+    }, */
     isEmpty(obj: any) {
       return JSON.stringify(obj) === '{}';
     },
@@ -377,7 +297,7 @@ export default defineComponent({
     getObservations() {
       return this.$storage.getObservations();
     },
-     getImmunizations() {
+    getImmunizations() {
       return this.$storage.getImmunizations();
     },
     setCurrentObservation(id: any) {
@@ -386,9 +306,9 @@ export default defineComponent({
     getCurrentObservation() {
       return this.$storage.getCurrentObservation();
     },
-    getObservationId() {
+    /*     getObservationId() {
       return this.$storage.getCurrentObservation().id;
-    },
+    }, */
     formatDate(date: any) {
       return this.$moment(date.toString()).format('lll');
     },
@@ -397,20 +317,40 @@ export default defineComponent({
       location.reload();
     },
 
-    testImmunizationsArray(){
+    testImmunizationsArray() {
+      console.log('running getImmunisations() ',this.$storage.getImmunizations(),
+     '\nrunning JSON-stringify(vaccinationsMidata) ',JSON.stringify(vaccinationsMidata));
+      
 
-      console.log('getImmunizationResourcesAsBundle: '+this.$midata.getImmunizationResourcesAsBundle());
-      console.log(this.$storage.getImmunizations());
+      
+      // console.log(
+      //   'getImmunizationResourcesAsBundle: ' +
+      //     this.$midata.getImmunizationResourcesAsBundle()
+      // );
+      // let array1 : Array<Immunization> = this.$storage.getImmunizations();
+      // console.log(JSON.stringify(array1[6].site.coding[0].display));
+      // console.log(JSON.stringify(array1[0]));
+      // console.log(array1[0]);
+
+      // console.log(
+      // JSON.stringify(midata.immunizations[0]),
+
+      // JSON.stringify(vaccinationsMidata)
+
+      // )
+
+      
+      // console.log(array1[6].patient._display);
+
+},
+    testObservationArray() {
+      // console.log(this.$midata.getPatientResource())
+      // console.log('getObservationResourcesAsBundle: '+this.$midata.getObservationResourcesAsBundle());
+      const array1 : Array<Immunization> = this.$storage.getImmunizations();
+      // console.log(JSON.stringify(array1[0].patient.display));
+
 
     },
-    testObservationArray(){
-      //console.log(this.$midata.getPatientResource())
-      //console.log('getObservationResourcesAsBundle: '+this.$midata.getObservationResourcesAsBundle());
-      console.log(this.$storage.getObservations());
-
-    },
-
-
   },
 });
 </script>

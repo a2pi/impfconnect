@@ -1,12 +1,37 @@
 import { JSOnFhir } from '@i4mi/js-on-fhir';
-import { Patient, Bundle, ObservationStatus, Observation, Immunization, ImmunizationStatus  } from '@i4mi/fhir_r4';
+import {
+  Patient,
+  Bundle,
+  Immunization,
+  ImmunizationPerformer,
+  Organization,
+  Practitioner,
+  BundleEntry,
+  ObservationStatus,
+  Observation,
+  ImmunizationStatus,
+  date
+} from '@i4mi/fhir_r4';
 import moment from 'moment';
+
+export const vaccinationsMidata = []
 
 // import moment library. More information under https://momentjs.com
 const now = moment();
 
 export default class MidataService {
-  jsOnFhir: JSOnFhir;
+  jsOnFhir: JSOnFhir
+  practitioner: Practitioner
+  loggedIn: false
+  currentPatient: Patient
+  immunization: Immunization
+  immunizationPerformer: ImmunizationPerformer
+  organization: Organization
+  patientSpid: string
+  immunizations: Array<Immunization>
+  currentVACDRecord: Bundle
+  immunizationResource: BundleEntry
+  compositionResource: BundleEntry
 
   constructor() {
     this.jsOnFhir = new JSOnFhir(
@@ -93,6 +118,76 @@ export default class MidataService {
     });
   }
 
+  createVaccinationTable(vaccinations: Array<Immunization>): void {
+
+    this.immunizations = vaccinations
+    // interface Row {
+    //   name: string,
+    //   lotNo: string,
+    //   protection: string,
+    //   dosageno: string,
+    //   vaccinationdate: string,
+    //   practicioner: string,
+    //   platform: Array<string>,
+    // }
+    interface midataRow {
+      name: string,
+      date: string,
+      primarysource: boolean,
+      lotNo: string,
+      expirationDate: string,
+      site: string,
+      occurrenceString: string,
+      route: string,
+      doseQuantity: string,
+      performer:string,
+      note:string,
+    }
+
+    this.immunizations.forEach(element => {
+
+      //What does this do?
+      const protections: Array<string> = []
+      element
+        .protocolApplied[0]
+        .targetDisease
+        .forEach(target => {
+          protections.push(target.coding[0].display)
+        }
+        )
+
+      // const row: Row = {
+      //   name: element.vaccineCode.text,
+      //   lotNo: element.lotNumber,
+      //   protection: protections.join(', '),
+      //   dosageno: element.identifier[0].value,
+      //   vaccinationdate: moment(element.occurrenceDateTime)?.format('MMMM Do YYYY, h:mm a'),
+      //   practicioner: '',
+      //   platform: ['epd']
+      // }
+      // vaccinationsMidata.push(row)
+
+      const miRow: midataRow = {
+      name: element.patient.display,
+      date: JSON.stringify(element._expirationDate),
+      primarysource: element.primarySource,
+      lotNo: element.lotNumber,
+      expirationDate: element.expirationDate,
+      site: JSON.stringify(element.site.coding[0].display), 
+      occurrenceString: element.occurrenceString,
+      route: JSON.stringify(element.route.coding[0].display),
+      doseQuantity:JSON.stringify(element.doseQuantity.value),
+      performer:JSON.stringify(element.performer[0].id),
+      note: JSON.stringify(element.note[0].text)
+        //platform: ['Midata']
+      }
+      vaccinationsMidata.push(miRow)
+      console.log(vaccinationsMidata.length)
+
+
+    });
+  }
+
 
   /**
    * Gets all observations from the fhir endpoint.
@@ -103,12 +198,12 @@ export default class MidataService {
       this.jsOnFhir.search('Observation').then((result) => {
         result
           ? resolve(
-              (result as Bundle).entry?.map(
-                (entry) => entry.resource as Observation
-              ) || []
-            )
+            (result as Bundle).entry?.map(
+              (entry) => entry.resource as Observation
+            ) || []
+          )
           : reject('Error');
-      }).catch((error)=> reject(error));
+      }).catch((error) => reject(error));
     });
   }
 
@@ -124,7 +219,7 @@ export default class MidataService {
     return new Promise((resolve, reject) => {
       this.jsOnFhir.search(resourceType, params).then((result) => {
         result ? resolve(result) : reject('Error');
-      }).catch((error)=> reject(error));
+      }).catch((error) => reject(error));
     });
   }
 
@@ -146,7 +241,7 @@ export default class MidataService {
       const observation = this.newBtObservation(_status, bodySite, value);
       this.jsOnFhir.create(observation).then((result) => {
         result ? resolve(result as Observation) : reject('internal error');
-      }).catch((error)=> reject(error));
+      }).catch((error) => reject(error));
     });
   }
 
@@ -188,17 +283,17 @@ export default class MidataService {
             )
           );
         }
-      }).catch((error)=> reject(error));
+      }).catch((error) => reject(error));
     });
   }
 
   /**
-   * Creates observation (of type Bodytemperature) where you can specify the status, bodySite and value.
-   * @param _status the status of the observation according to: http://hl7.org/fhir/observation-status
-   * @param bodySite the body site where the bodytemperature was measured.
-   * @param value the measured body temperature value.
-   * @returns
-   */
+  * Creates observation (of type Bodytemperature) where you can specify the status, bodySite and value.
+  * @param _status the status of the observation according to: http://hl7.org/fhir/observation-status
+  * @param bodySite the body site where the bodytemperature was measured.
+  * @param value the measured body temperature value.
+  * @returns
+  */
   newBtObservation(
     _status: ObservationStatus,
     bodySite: string,
@@ -250,10 +345,10 @@ export default class MidataService {
   }
 
   /**
-   * Helper function that creates a bodySite object to be used in an observation.
-   * @param bodySite the body site where the bodytemperature was measured.
-   * @returns bodySite with coding as JSON.
-   */
+  * Helper function that creates a bodySite object to be used in an observation.
+  * @param bodySite the body site where the bodytemperature was measured.
+  * @returns bodySite with coding as JSON.
+  */
   getBodySite(bodySite: string) {
     switch (bodySite) {
       case 'Axillary':
@@ -380,10 +475,10 @@ export default class MidataService {
   }
 
   /**
-   * Helper function that creates a Method of measurement to be used in an observation.
-   * @param bodySite the body site where the bodytemperature was measured.
-   * @returns method of temperature taking with coding as JSON.
-   */
+  * Helper function that creates a Method of measurement to be used in an observation.
+  * @param bodySite the body site where the bodytemperature was measured.
+  * @returns method of temperature taking with coding as JSON.
+  */
   getMethod(bodySite: string) {
     switch (bodySite) {
       case 'Oral':
@@ -444,77 +539,88 @@ export default class MidataService {
 
 
 
-/**
-   * ---------------------------------------------------------------
-   * Gets the Immunization resources as bundle from the fhir endpoint.
-   * @returns bundle with Immunization resources as JSON.
-   * ----------------------------------------------------------------
-   */
- getImmunizationResourcesAsBundle(): Promise<Bundle> {
-  return new Promise((resolve, reject) => {
-    this.jsOnFhir
-      .search('Immunization')
-      .then((result) => {
-        const immunizationBundle = result as Bundle;
+  /**
+    * ---------------------------------------------------------------
+    * Gets the Immunization resources as bundle from the fhir endpoint.
+    * @returns bundle with Immunization resources as JSON.
+    * ----------------------------------------------------------------
+    */
+  getImmunizationResourcesAsBundle(): Promise<Bundle> {
+    return new Promise((resolve, reject) => {
+      this.jsOnFhir
+        .search('Immunization')
+        .then((result) => {
+          const immunizationBundle = result as Bundle;
 
-        immunizationBundle.entry?.length > 0
-          ? resolve(immunizationBundle)
-          : reject('No entries in Immunization bundle found!');
-      })
-      .catch((error) => reject(error));
-  });
-}
+          immunizationBundle.entry?.length > 0
+            ? resolve(immunizationBundle)
+            : reject('No entries in Immunization bundle found!');
+        })
+        .catch((error) => reject(error));
+    });
+  }
 
   /**
-     * Gets all immunizations from the fhir endpoint.
-     * @returns bundle with observations
-     */
+    * Gets all immunizations from the fhir endpoint.
+    * @returns bundle with Immunizations
+    */
   public loadImmunizations() {
+
     return new Promise((resolve, reject) => {
       this.jsOnFhir.search('Immunization').then((result) => {
         result
           ? resolve(
-              (result as Bundle).entry?.map(
-                (entry) => entry.resource as Immunization
-              ) || []
-            )
+            (result as Bundle).entry?.map(
+              (entry) => entry.resource as Immunization
+            ) || []
+          )
           : reject('Error');
-      }).catch((error)=> reject(error));
+      }).catch((error) => reject(error));
     });
   }
-  /**
-   * Creates a Immunization (of type bodytemperature) resource on the fhir server
-   *              - if successfull -> response with the created resource as JSON
-   *              - if not successfull -> error message
-   */
-   public createImmunization(
-    ): Promise<Immunization> {
-      return new Promise((resolve, reject) => {
-        const immunization = this.newImmunization();
-        this.jsOnFhir.create(immunization).then((result) => {
-          result ? resolve(result as Immunization) : reject('internal error');
-        }).catch((error)=> reject(error));
-      });
-    }
 
-    /**
-   * Creates immunization with status (compleated as default), vacination code, patient, date, lot number, performer and dose quantity
-   */
-   newImmunization():Immunization {
+  /**
+  * Creates a Immunization (of type bodytemperature) resource on the fhir server
+  *              - if successfull -> response with the created resource as JSON
+  *              - if not successfull -> error message
+  */
+  public createImmunization(
+  ): Promise<Immunization> {
+    return new Promise((resolve, reject) => {
+      const immunization = this.newImmunization();
+      this.jsOnFhir.create(immunization).then((result) => {
+        result ? resolve(result as Immunization) : reject('internal error');
+      }).catch((error) => reject(error));
+    });
+  }
+
+  /**
+* Creates immunization with status (compleated as default), vacination code, patient, date, lot number, performer and dose quantity
+*/
+  newImmunization(): Immunization {
     return {
 
       resourceType: 'Immunization',
       status: ImmunizationStatus.COMPLETED,
 
+      /**
+      * vacinationCode: string
+      * dateAndTime: date
+      * primarySource: booleam
+      * lotnumber:string
+      * expirationDate:date
+      * site: array ( hast to have part of the body and a code)
+      */
+
       vaccineCode: {
-              coding: [
-                {
-                  system: 'urn:oid:1.2.36.1.2001.1005.17',
-                  code: 'FLUVAX',
-                }
-                ],
-                text: 'Fluvax (In fluenza)',
-          },
+        coding: [
+          {
+            system: 'urn:oid:1.2.36.1.2001.1005.17',
+            code: 'FLUVAX',
+          }
+        ],
+        text: 'Fluvax (In fluenza)',
+      },
 
       occurrenceDateTime: '2013-01-10',
       primarySource: true,
@@ -522,16 +628,16 @@ export default class MidataService {
       expirationDate: '2015-02-15',
 
       site: {
-          coding: [
-                    {
-                      system: 'http://terminology.hl7.org/CodeSystem/v3-ActSite',
-                      code: 'LA',
-                      display: 'left arm'
-                    }
-                  ]
-              },
+        coding: [
+          {
+            system: 'http://terminology.hl7.org/CodeSystem/v3-ActSite',
+            code: 'LA',
+            display: 'left arm'
+          }
+        ]
+      },
 
-          patient: {
+      patient: {
         display: '',
         reference: 'Patient/' + this.jsOnFhir.getPatient(),
       },
@@ -539,44 +645,91 @@ export default class MidataService {
       occurrenceString: '2022-02-16',
 
       route: {
-          coding: [
-                    {
-                      system: 'http://terminology.hl7.org/CodeSystem/v3-RouteOfAdministration',
-                      code: 'IM',
-                      display: 'Injection, intramuscular'
-                    }
-                  ]
-              },
+        coding: [
+          {
+            system: 'http://terminology.hl7.org/CodeSystem/v3-RouteOfAdministration',
+            code: 'IM',
+            display: 'Injection, intramuscular'
+          }
+        ]
+      },
 
 
       doseQuantity: {
-                  value: 5,
-                  system: 'http://unitsofmeasure.org',
-                  code: 'mg'
-                },
+        value: 5,
+        system: 'http://unitsofmeasure.org',
+        code: 'mg'
+      },
 
 
       performer: [
-                    {
-                    actor: {
-                      identifier:
-                      {
-                        system : 'http://www.gs1.org/gln',
-                        value: '7640166732204'
-                      },
-                      display : 'Dr. med. Hanspeter Wenger'
-                    }
-                    }
-                ],
-                note: [
-                        {
-                          text: 'if you are reading this, your code worked'
-                        }
-                      ]
+        {
+          actor: {
+            identifier:
+            {
+              system: 'http://www.gs1.org/gln',
+              value: '7640166732204'
+            },
+            display: 'Dr. med. Hanspeter Wenger'
+          }
+        }
+      ],
+      note: [
+        {
+          text: 'if you are reading this, your code worked'
+        }
+      ]
 
 
 
     };
+  }
+  /**
+  * Helper function that creates a Method of measurement to be used in an observation.
+  * @param bodySite the body site where the bodytemperature was measured.
+  * @returns method of temperature taking with coding as JSON.
+  */
+  getImmunizationSite(bodySite: string) {
+    switch (bodySite) {
+      case 'left arm':
+        return {
+          coding: [
+            {
+              system: 'http://terminology.hl7.org/CodeSystem/v3-ActSite',
+              code: 'LA',
+              display: 'left arm'
+            }
+          ]
+        };
+      case 'left gluteus':
+        return {
+
+          system: 'http://terminology.hl7.org/CodeSystem/v3-ActSite',
+          code: 'LG',
+          display: 'left gluteus medius'
+
+
+        };
+      case 'right gluteus':
+        return {
+          system: 'http://terminology.hl7.org/CodeSystem/v3-ActSite',
+          code: 'RG',
+          display: 'right gluteus medius'
+        };
+      case 'right arm':
+        return {
+          system: 'http://terminology.hl7.org/CodeSystem/v3-ActSite',
+          code: 'RA',
+          display: 'right arm'
+        };
+      default:
+        return {
+          system: 'http://terminology.hl7.org/CodeSystem/v3-ActSite',
+          code: '_HumanSubstanceAdministrationSite',
+          display: 'Human Substance Administration Site'
+
+        };
+    }
   }
 
 }
